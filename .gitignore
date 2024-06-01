@@ -1,0 +1,15 @@
+# IDE-specific settings
+.vscode
+.idea
+.vs
+
+# build temporary files
+cmake-build-debug-clangcl
+out
+build
+
+# cmake presets
+CMakePresets.json
+CMakeUserPresets.json
+
+dataset

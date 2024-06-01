@@ -1,0 +1,35 @@
+#+title: Graph Tool
+
+
+* Introduction
+
+A simple graph pre-processing library.
+
+* Manual
+
+** Build
+
+Use *C++17* and newer.
+
+There's no other dependency, so you can simply use:
+
+#+begin_src shell
+  mkdir build
+  cmake -S . -B ./build
+  cmake --build ./build --config Release
+#+end_src
+
+** Dataset
+
+** Run
+
+Run demo program use:
+
+#+begin_src shell
+  ./build/demo ./dataset/Slashdot0811.txt
+#+end_src
+
+** Use it in development
+
+Simply include all the headers and link =gtool= library in your cmake
+file.
