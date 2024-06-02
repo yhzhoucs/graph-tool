@@ -47,7 +47,7 @@ protected:
         return el;
     }
     template<std::ranges::random_access_range Rng>
-    requires std::is_same_v<typename Rng::value_type, typename EdgeList::value_type>
+    requires std::is_same_v<std::decay_t<decltype(std::declval<Rng>()[0])>, typename EdgeList::value_type>
     Graph<T, DstT> build_csr_from_edge_list(Rng const &el) {
         typedef typename Graph<T, DstT>::offset_t offset_t;
         T max_idx{};
