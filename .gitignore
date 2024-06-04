@@ -4,7 +4,7 @@
 .vs
 
 # build temporary files
-cmake-build-debug-clangcl
+cmake-build-debug-clang
 out
 build
 
