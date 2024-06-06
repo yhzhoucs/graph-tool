@@ -55,7 +55,7 @@ protected:
         for (int i = 0; i < el.size(); ++i) {
             max_idx = std::max({ max_idx, el[i].first, get_dst_id(el[i].second) });
         }
-        T vertex_number = max_idx + 1;
+        std::size_t vertex_number = max_idx + 1;
         std::vector<offset_t> out_degrees(vertex_number, 0);
 #pragma omp parallel for default(none) shared(el, out_degrees)
         for (int i = 0; i < el.size(); ++i) {

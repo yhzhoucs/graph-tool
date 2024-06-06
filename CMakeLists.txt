@@ -5,24 +5,32 @@ project(gtool
     LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+option(ENABLE_BUILD_DEMO "enable build demos" OFF)
+option(ENABLE_BUILD_TEST "enable test" OFF)
 
 add_library(gtool INTERFACE)
 target_include_directories(gtool INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-add_executable(demo src/main.cpp)
-target_link_libraries(demo PRIVATE gtool)
-target_compile_definitions(demo PRIVATE DATASET_PATH="${PROJECT_SOURCE_DIR}/dataset")
-
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    message("OpenMP Found")
-    target_link_libraries(demo PUBLIC OpenMP::OpenMP_CXX)
+    message(STATUS "OpenMP Found")
     target_link_libraries(gtool INTERFACE OpenMP::OpenMP_CXX)
-endif()
+else ()
+    message(STATUS "OpenMP Not Found")
+endif ()
 
+if (ENABLE_BUILD_DEMO)
+    add_subdirectory(src)
+endif ()
+
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND ENABLE_BUILD_TEST)
+    include(CTest)
+    add_subdirectory(tests)
+endif ()
+
+# install and pack
 install(TARGETS gtool
         EXPORT gtool
         RUNTIME DESTINATION bin

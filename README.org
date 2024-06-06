@@ -7,29 +7,49 @@ A simple graph pre-processing library.
 
 * Manual
 
-** Build
+** Intergration
 
 Use *C++17* and newer.
 
-There's no other dependency, so you can simply use:
+There's no other dependency if you just use it as a library for your
+own project. There're two ways to intergrate it into your own project.
 
-#+begin_src shell
-  mkdir build
-  cmake -S . -B ./build
-  cmake --build ./build --config Release
+*** git clone
+
+You can just clone it to the third-party dependency directory such as
+=extern/=. Then, you can include it in your CMakeLists.txt:
+
+#+begin_src cmake
+add_executable(Foo main.cpp)
+add_subdirectory(extern/gtool)
+target_link_libraries(Foo PRIVATE gtool)
 #+end_src
 
-** Dataset
+*** cmake package
 
-** Run
+A packaged gtool is in Release area. Download and extract it to the
+library directory in your system. Import it in your CMakeLists.txt:
 
-Run demo program use:
+#+begin_src cmake
+add_executable(Foo main.cpp)
+find_package(gtool CONFIG REQUIRED PATHS path/to/your/libraries)
+target_link_libraries(Foo PRIVATE gtool::gtool)
+#+end_src
 
-#+begin_src shell
-  ./build/demo ./dataset/Slashdot0811.txt
+** Run Demo
+
+Follow the procedure below:
+
+#+begin_src
+mkdir build
+cmake -S . -B build -G "Ninja Multi-Config" -DENABLE_BUILD_DEMO=ON
+cmake --build ./build --config Release
+./build/demo1 ./dataset/Slashdot0811.txt
+./build/demo2 ./dataset/Slashdot0811.txt
 #+end_src
 
 ** Use it in development
 
-Simply include all the headers and link =gtool= library in your cmake
-file.
+Clone this library and modify the code as you want.
+
+You may want to use CTest. This project relies on [[https://github.com/catchorg/Catch2/][Catch2]] to finish all the tests. Remember to enable it by adding flag *-DENABLE_BUILD_TEST=ON*.

@@ -2,12 +2,10 @@
 
 #include <type_traits>
 #include <concepts>
-#include <cinttypes>
 #include <utility>
 #include <vector>
 #include <algorithm>
 #include <tuple>
-#include <functional>
 
 namespace gtool {
 
@@ -23,8 +21,8 @@ public:
     typedef DstT destination_type;
 private:
     bool directed_;
-    int64_t vertex_number_;
-    int64_t edge_number_;
+    std::size_t vertex_number_;
+    std::size_t edge_number_;
     offset_t *out_offset;
     DstT *out_neigh;
     offset_t *in_offset;
@@ -42,8 +40,8 @@ private:
 public:
     Graph(): directed_{}, vertex_number_{}, edge_number_{}, out_offset{nullptr},
         out_neigh{nullptr}, in_offset{nullptr}, in_neigh{nullptr} {};
-    Graph(int64_t vertex_number, offset_t *&out_offset, DstT *&out_neigh);
-    Graph(int64_t vertex_number, offset_t *&out_offset, DstT *&out_neigh,
+    Graph(std::size_t vertex_number, offset_t *&out_offset, DstT *&out_neigh);
+    Graph(std::size_t vertex_number, offset_t *&out_offset, DstT *&out_neigh,
           offset_t *&in_offset, DstT *&in_neigh);
     Graph(Graph<T, DstT> const &graph) = delete;
     Graph(Graph<T, DstT> &&graph) noexcept;
@@ -53,8 +51,8 @@ public:
     Graph<T, DstT> &operator=(Graph<T, DstT> &&other) noexcept;
 
     [[nodiscard]] bool directed() const { return directed_; }
-    [[nodiscard]] int64_t get_vertex_number() const { return vertex_number_; }
-    [[nodiscard]] int64_t get_edge_number() const { return edge_number_; }
+    [[nodiscard]] std::size_t get_vertex_number() const { return vertex_number_; }
+    [[nodiscard]] std::size_t get_edge_number() const { return edge_number_; }
     [[nodiscard]] offset_t const *get_out_offset() const { return out_offset; }
     [[nodiscard]] offset_t const *get_in_offset() const { return in_offset; }
     [[nodiscard]] DstT const *get_out_neigh() const { return out_neigh; }
@@ -70,84 +68,6 @@ public:
 };
 
 template<typename T, typename DstT>
-Graph<T, DstT>::Graph(int64_t vertex_number, offset_t *&out_offset, DstT *&out_neigh)
-    : directed_{ false }, vertex_number_{ vertex_number } {
-    this->out_offset = std::exchange(out_offset, nullptr);
-    this->out_neigh = std::exchange(out_neigh, nullptr);
-    this->in_offset = this->out_offset;
-    this->in_neigh = this->out_neigh;
-    edge_number_ = this->out_offset[vertex_number_] - this->out_offset[0];
-}
-
-template<typename T, typename DstT>
-Graph<T, DstT>::Graph(int64_t vertex_number, offset_t *&out_offset, DstT *&out_neigh,
-                      offset_t *&in_offset, DstT *&in_neigh)
-    : Graph<T, DstT>{vertex_number, out_offset, out_neigh} {
-    this->directed_ = true;
-    this->in_offset = std::exchange(in_offset, nullptr);
-    this->in_neigh = std::exchange(in_neigh, nullptr);
-    edge_number_ = this->out_offset[vertex_number_] - this->out_offset[0];
-}
-
-template<typename T, typename DstT>
-Graph<T, DstT>::Graph(Graph<T, DstT> &&graph) noexcept
-    : directed_{ std::move(graph.directed_) },
-    vertex_number_{std::move(graph.vertex_number)},
-    edge_number_{std::move(graph.edge_number_)} {
-    out_offset = std::exchange(graph.out_offset, nullptr);
-    out_neigh = std::exchange(graph.out_neigh, nullptr);
-    in_offset = std::exchange(graph.in_offset, nullptr);
-    in_neigh = std::exchange(graph.in_neigh, nullptr);
-}
-
-template<typename T, typename DstT>
-Graph<T, DstT>::~Graph() {
-    delete[] out_offset;
-    delete[] out_neigh;
-    if (directed_) {
-        delete[] in_offset;
-        delete[] in_neigh;
-    }
-}
-
-template<typename T, typename DstT>
-Graph<T, DstT> &Graph<T, DstT>::operator=(Graph<T, DstT> &&other) noexcept {
-    if (this == &other)
-        return *this;
-    delete[] this->out_offset;
-    delete[] this->out_neigh;
-    if (this->directed_) {
-        delete[] this->in_offset;
-        delete[] this->in_neigh;
-    }
-    this->directed_ = std::exchange(other.directed_, false);
-    this->vertex_number_ = std::exchange(other.vertex_number_, 0);
-    this->edge_number_ = std::exchange(other.edge_number_, 0);
-    this->out_offset = std::exchange(other.out_offset, nullptr);
-    this->out_neigh = std::exchange(other.out_neigh, nullptr);
-    this->in_offset = std::exchange(other.in_offset, nullptr);
-    this->in_neigh = std::exchange(other.in_neigh, nullptr);
-    return *this;
-}
-
-template<typename T, typename DstT>
-    template<typename Comp>
-void Graph<T, DstT>::sort_neighborhood(Comp comp) {
-    for (T u = 0; u < this->vertex_number_; ++u) {
-        std::sort(&out_neigh[out_offset[u]],
-                  &out_neigh[out_offset[u + 1]],
-                  [&](T const &lhs, T const &rhs) { return comp(out_degree(lhs), out_degree(rhs)); });
-    }
-    if (directed_) {
-        for (T u = 0; u < this->vertex_number_; ++u) {
-            std::sort(&in_neigh[in_offset[u]],
-                      &in_neigh[in_offset[u + 1]],
-                      [&](T const &lhs, T const &rhs) { return comp(out_degree(lhs), out_degree(rhs)); });
-        }
-    }
-}
-
-template<typename T, typename DstT>
 std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Graph<T, DstT> const &g) {
     typedef typename Graph<T, DstT>::offset_t offset_t;
     typedef std::pair<offset_t, T> DegreeNVertex;
@@ -156,7 +76,7 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Gra
         degree_vertex_pairs.emplace_back(g.out_degree(i), i);
     }
     std::sort(degree_vertex_pairs.begin(), degree_vertex_pairs.end(), std::greater<DegreeNVertex>());
-    int64_t vertex_number = g.get_vertex_number();
+    std::size_t vertex_number = g.get_vertex_number();
     std::vector<T> out_degrees(vertex_number, 0);
     std::vector<T> new_ids(vertex_number, 0);
     std::vector<T> new_ids_remap(vertex_number, 0);
@@ -172,7 +92,7 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Gra
         curr += out_degrees[i];
     }
     out_offset[vertex_number] = curr;
-    int64_t edge_number = curr;
+    std::size_t edge_number = curr;
     auto *out_neigh = new DstT[edge_number];
     auto *tmp = new offset_t[vertex_number + 1];
     std::copy(out_offset, out_offset + (vertex_number + 1), tmp);
@@ -219,7 +139,7 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Gra
 
 template<typename T, typename DstT>
 std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> squeeze_graph(Graph<T, DstT> const &g) {
-    int64_t mapped_src{};
+    std::size_t mapped_src{};
     std::vector<T> vertex_map(g.get_vertex_number(), 0);
     std::vector<T> vertex_remap(g.get_vertex_number(), 0);
     for (int u = 0; u < g.get_vertex_number(); ++u) {
@@ -230,7 +150,7 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> squeeze_graph(Graph<T
         }
     }
     typedef typename Graph<T, DstT>::offset_t offset_t;
-    int64_t squeezed_vertex_number = mapped_src;
+    std::size_t squeezed_vertex_number = mapped_src;
     std::vector<offset_t> out_degrees(squeezed_vertex_number, 0);
     for (T u = 0; u < squeezed_vertex_number; ++u) {
         out_degrees[u] = g.out_degree(vertex_remap[u]);
@@ -242,7 +162,7 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> squeeze_graph(Graph<T
         curr += out_degrees[u];
     }
     out_offset[squeezed_vertex_number] = curr;
-    int64_t edge_number = curr;
+    std::size_t edge_number = curr;
     auto *out_neigh = new DstT[edge_number];
     auto *tmp = new offset_t[squeezed_vertex_number + 1];
     std::copy(out_offset, out_offset + (squeezed_vertex_number + 1), tmp);
@@ -299,7 +219,7 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> squeeze_graph(Graph<T
 template<typename T, typename DstT>
 Graph<T, DstT> simplify_graph(Graph<T, DstT> &raw) {
     typedef typename Graph<T, DstT>::offset_t offset_t;
-    int64_t vertex_number = raw.vertex_number_;
+    std::size_t vertex_number = raw.vertex_number_;
     std::vector<offset_t> out_degrees(vertex_number, 0);
     for (T u = 0; u < vertex_number; ++u) {
         out_degrees[u] = std::distance(&raw.out_neigh[raw.out_offset[u]], 
@@ -313,7 +233,7 @@ Graph<T, DstT> simplify_graph(Graph<T, DstT> &raw) {
         curr += out_degrees[i];
     }
     out_offset[vertex_number] = curr;
-    int64_t edge_number = out_offset[vertex_number];
+    std::size_t edge_number = out_offset[vertex_number];
     auto *out_neigh = new DstT[edge_number];
     for (T u = 0; u < vertex_number; ++u) {
         std::copy(&raw.out_neigh[raw.out_offset[u]], &raw.out_neigh[raw.out_offset[u]+out_degrees[u]], &out_neigh[out_offset[u]]);
@@ -342,3 +262,5 @@ Graph<T, DstT> simplify_graph(Graph<T, DstT> &raw) {
 }
 
 }
+
+#include "graph.tpp"
