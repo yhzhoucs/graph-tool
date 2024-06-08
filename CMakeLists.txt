@@ -4,17 +4,21 @@ project(gtool
     DESCRIPTION "A simple graph processing tool"
     LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
 option(ENABLE_BUILD_DEMO "enable build demos" OFF)
 option(ENABLE_BUILD_TEST "enable test" OFF)
+option(BUILD_WITH_RESTORE "build gtool with restore" OFF)
 
 add_library(gtool INTERFACE)
+set_property(TARGET gtool PROPERTY CXX_STANDARD 11)
 target_include_directories(gtool INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+if (BUILD_WITH_RESTORE)
+    target_compile_definitions(gtool INTERFACE BUILD_WITH_RESTORE)
+endif ()
 
 find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
+if (OpenMP_CXX_FOUND)
     message(STATUS "OpenMP Found")
     target_link_libraries(gtool INTERFACE OpenMP::OpenMP_CXX)
 else ()
@@ -50,7 +54,7 @@ install(
 include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
-        gtoolConfig.cmake.in ${PROJECT_BINARY_DIR}/gtoolConfig.cmake
+        cmake/gtoolConfig.cmake.in ${PROJECT_BINARY_DIR}/gtoolConfig.cmake
         INSTALL_DESTINATION lib/cmake/gtool)
 
 write_basic_package_version_file(

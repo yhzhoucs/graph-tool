@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 
     fs::path graph_file_path;
     if (argc < 2) {
-        graph_file_path = fs::path(DATASET_PATH) / "Slashdot0811.txt";
+        graph_file_path = fs::path(DATASET_PATH) / "soc-Slashdot0811.txt";
     } else {
         graph_file_path = argv[1];
     }
@@ -31,16 +31,5 @@ int main(int argc, char *argv[]) {
     std::clog << "Vertex: " << graph.get_vertex_number() << std::endl;
     std::clog << "Edge: " << graph.get_edge_number() << std::endl;
 
-    auto const *out_offset = graph.get_out_offset();
-    auto const *out_neigh = graph.get_out_neigh();
-
-    for (std::size_t i{}; i < 10/* graph.get_vertex_number() */; ++i) {
-        std::cout << out_offset[i] << " ";
-    }
-    std::cout << std::endl;
-    for (std::size_t i{}; i < 10/* graph.get_edge_number() */; ++i) {
-        std::cout << gtool::get_dst_id(out_neigh[i]) << " ";
-    }
-    std::cout << std::endl;
     return 0;
 }

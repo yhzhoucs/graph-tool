@@ -1,33 +1,26 @@
 #pragma once
 
 #include <type_traits>
-#include <concepts>
 #include <utility>
 #include <vector>
 #include <algorithm>
 #include <tuple>
+#include <memory>
 
 namespace gtool {
 
-auto &get_dst_id(std::integral auto &dst) {
+typedef std::make_unsigned<std::ptrdiff_t>::type offset_t;
+
+template<typename T, typename=std::enable_if<std::is_integral<T>::value>::type>
+T &get_dst_id(T &dst) {
     return dst;
 }
 
 template<typename T, typename DstT = T>
 class Graph {
 public:
-    typedef std::make_unsigned<std::ptrdiff_t>::type offset_t;
     typedef T vertex_type;
     typedef DstT destination_type;
-private:
-    bool directed_;
-    std::size_t vertex_number_;
-    std::size_t edge_number_;
-    offset_t *out_offset;
-    DstT *out_neigh;
-    offset_t *in_offset;
-    DstT *in_neigh;
-
     struct Neighborhood {
         T n;
         offset_t *offset;
@@ -37,39 +30,62 @@ private:
         iterator begin() { return neigh + offset[n]; }
         iterator end() { return neigh + offset[n + 1]; }
     };
-public:
-    Graph(): directed_{}, vertex_number_{}, edge_number_{}, out_offset{nullptr},
-        out_neigh{nullptr}, in_offset{nullptr}, in_neigh{nullptr} {};
-    Graph(std::size_t vertex_number, offset_t *&out_offset, DstT *&out_neigh);
-    Graph(std::size_t vertex_number, offset_t *&out_offset, DstT *&out_neigh,
-          offset_t *&in_offset, DstT *&in_neigh);
-    Graph(Graph<T, DstT> const &graph) = delete;
-    Graph(Graph<T, DstT> &&graph) noexcept;
-    ~Graph();
 
-    Graph<T, DstT> &operator=(Graph<T, DstT> const &other) = delete;
-    Graph<T, DstT> &operator=(Graph<T, DstT> &&other) noexcept;
-
+    Graph(): directed_{}, vertex_number_{}, edge_number_{}, out_offset_{},
+             out_neigh_{}, in_offset_{}, in_neigh_{} {};
+    Graph(std::size_t vertex_number, std::shared_ptr<offset_t> out_offset, std::shared_ptr<DstT> out_neigh)
+        : vertex_number_{vertex_number}, out_offset_(std::move(out_offset)), out_neigh_(std::move(out_neigh)) {
+        in_offset_ = out_offset_;
+        in_neigh_ = out_neigh_;
+        edge_number_ = out_offset_.get()[vertex_number_];
+    }
+    Graph(std::size_t vertex_number, std::shared_ptr<offset_t> out_offset, std::shared_ptr<DstT> out_neigh,
+          std::shared_ptr<offset_t> in_offset, std::shared_ptr<DstT> in_neigh)
+          : vertex_number_{vertex_number}, out_offset_(std::move(out_offset)), out_neigh_(std::move(out_neigh)),
+          in_offset_(std::move(in_offset)), in_neigh_(std::move(in_neigh)) {
+        edge_number_ = out_offset_.get()[vertex_number_];
+    }
+    ~Graph() = default;
     [[nodiscard]] bool directed() const { return directed_; }
     [[nodiscard]] std::size_t get_vertex_number() const { return vertex_number_; }
     [[nodiscard]] std::size_t get_edge_number() const { return edge_number_; }
-    [[nodiscard]] offset_t const *get_out_offset() const { return out_offset; }
-    [[nodiscard]] offset_t const *get_in_offset() const { return in_offset; }
-    [[nodiscard]] DstT const *get_out_neigh() const { return out_neigh; }
-    [[nodiscard]] DstT const *get_in_neigh() const { return in_neigh; }
-    offset_t out_degree(T n) const { return out_offset[n + 1] - out_offset[n]; }
-    offset_t in_degree(T n) const { return in_offset[n + 1] - in_offset[n]; }
-    Neighborhood out_neighbors(T n) const { return {n, out_offset, out_neigh}; }
-    Neighborhood in_neighbors(T n) const { return {n, in_offset, in_neigh}; }
+    offset_t out_degree(T n) const { return out_offset_.get()[n + 1] - out_offset_.get()[n]; }
+    offset_t in_degree(T n) const { return in_offset_.get()[n + 1] - in_offset_.get()[n]; }
+    Neighborhood out_neighbors(T n) const { return {n, out_offset_.get(), out_neigh_.get()}; }
+    Neighborhood in_neighbors(T n) const { return {n, in_offset_.get(), in_neigh_.get()}; }
     template<typename Comp>
     void sort_neighborhood(Comp comp);
     template<typename TT, typename DstTT>
     friend Graph<TT, DstTT> simplify_graph(Graph<TT, DstTT> &raw);
+private:
+    bool directed_;
+    std::size_t vertex_number_;
+    std::size_t edge_number_;
+    std::shared_ptr<offset_t> out_offset_;
+    std::shared_ptr<DstT> out_neigh_;
+    std::shared_ptr<offset_t> in_offset_;
+    std::shared_ptr<DstT> in_neigh_;
 };
 
 template<typename T, typename DstT>
+template<typename Comp>
+void Graph<T, DstT>::sort_neighborhood(Comp comp) {
+    for (T u = 0; u < vertex_number_; ++u) {
+        std::sort(&out_neigh_.get()[out_offset_.get()[u]],
+                  &out_neigh_.get()[out_offset_.get()[u + 1]],
+                  [&](T const &lhs, T const &rhs) { return comp(out_degree(lhs), out_degree(rhs)); });
+    }
+    if (directed_) {
+        for (T u = 0; u < vertex_number_; ++u) {
+            std::sort(&in_neigh_.get()[in_offset_.get()[u]],
+                      &in_neigh_.get()[in_offset_.get()[u + 1]],
+                      [&](T const &lhs, T const &rhs) { return comp(out_degree(lhs), out_degree(rhs)); });
+        }
+    }
+}
+
+template<typename T, typename DstT>
 std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Graph<T, DstT> const &g) {
-    typedef typename Graph<T, DstT>::offset_t offset_t;
     typedef std::pair<offset_t, T> DegreeNVertex;
     std::vector<DegreeNVertex> degree_vertex_pairs;
     for (int i = 0; i < g.get_vertex_number(); ++i) {
@@ -85,24 +101,24 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Gra
         new_ids[degree_vertex_pairs[i].second] = i;
         new_ids_remap[i] = degree_vertex_pairs[i].second;
     }
-    auto *out_offset = new offset_t[vertex_number + 1];
+    std::shared_ptr<offset_t> out_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
     offset_t curr{};
     for (int i = 0; i < vertex_number; ++i) {
-        out_offset[i] = curr;
+        out_offset.get()[i] = curr;
         curr += out_degrees[i];
     }
-    out_offset[vertex_number] = curr;
+    out_offset.get()[vertex_number] = curr;
     std::size_t edge_number = curr;
-    auto *out_neigh = new DstT[edge_number];
+    std::shared_ptr<DstT> out_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
     auto *tmp = new offset_t[vertex_number + 1];
-    std::copy(out_offset, out_offset + (vertex_number + 1), tmp);
+    std::copy(out_offset.get(), out_offset.get() + (vertex_number + 1), tmp);
     for (int u = 0; u < vertex_number; ++u) {
         for (DstT const &v : g.out_neighbors(u)) {
-            out_neigh[tmp[new_ids[u]]] = new_ids[get_dst_id(v)];
+            out_neigh.get()[tmp[new_ids[u]]] = new_ids[get_dst_id(v)];
             tmp[new_ids[u]]++;
         }
-        std::sort(&out_neigh[out_offset[new_ids[u]]],
-                  &out_neigh[out_offset[new_ids[u]+1]],
+        std::sort(&out_neigh.get()[out_offset.get()[new_ids[u]]],
+                  &out_neigh.get()[out_offset.get()[new_ids[u]+1]],
                   [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) < get_dst_id(rhs); });
     }
     if (!g.directed()) {
@@ -113,22 +129,22 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Gra
     for (int i = 0; i < vertex_number; ++i) {
         in_degrees[new_ids[i]] = g.in_degree(i);
     }
-    auto *in_offset = new offset_t[vertex_number + 1];
+    std::shared_ptr<offset_t> in_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
     curr = 0;
     for (int i = 0; i < vertex_number; ++i) {
-        in_offset[i] = curr;
+        in_offset.get()[i] = curr;
         curr += in_degrees[i];
     }
-    in_offset[vertex_number] = curr;
-    auto *in_neigh = new DstT[edge_number];
-    std::copy(in_offset, in_offset + (vertex_number + 1), tmp);
+    in_offset.get()[vertex_number] = curr;
+    std::shared_ptr<DstT> in_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
+    std::copy(in_offset.get(), in_offset.get() + (vertex_number + 1), tmp);
     for (int u = 0; u < vertex_number; ++u) {
         for (DstT const &v : g.in_neighbors(u)) {
-            in_neigh[tmp[new_ids[u]]] = new_ids[get_dst_id(v)];
+            in_neigh.get()[tmp[new_ids[u]]] = new_ids[get_dst_id(v)];
             tmp[new_ids[u]]++;
         }
-        std::sort(&in_neigh[in_offset[new_ids[u]]],
-                  &in_neigh[in_offset[new_ids[u]+1]],
+        std::sort(&in_neigh.get()[in_offset.get()[new_ids[u]]],
+                  &in_neigh.get()[in_offset.get()[new_ids[u]+1]],
                   [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) < get_dst_id(rhs); });
     }
     delete[] tmp;
@@ -149,60 +165,59 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> squeeze_graph(Graph<T
             mapped_src++;
         }
     }
-    typedef typename Graph<T, DstT>::offset_t offset_t;
     std::size_t squeezed_vertex_number = mapped_src;
     std::vector<offset_t> out_degrees(squeezed_vertex_number, 0);
     for (T u = 0; u < squeezed_vertex_number; ++u) {
         out_degrees[u] = g.out_degree(vertex_remap[u]);
     }
-    auto *out_offset = new offset_t[mapped_src + 1];
+    std::shared_ptr<offset_t> out_offset(new offset_t[mapped_src + 1], std::default_delete<offset_t[]>());
     offset_t curr{};
     for (T u = 0; u < squeezed_vertex_number; ++u) {
-        out_offset[u] = curr;
+        out_offset.get()[u] = curr;
         curr += out_degrees[u];
     }
-    out_offset[squeezed_vertex_number] = curr;
+    out_offset.get()[squeezed_vertex_number] = curr;
     std::size_t edge_number = curr;
-    auto *out_neigh = new DstT[edge_number];
+    std::shared_ptr<DstT> out_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
     auto *tmp = new offset_t[squeezed_vertex_number + 1];
-    std::copy(out_offset, out_offset + (squeezed_vertex_number + 1), tmp);
+    std::copy(out_offset.get(), out_offset.get() + (squeezed_vertex_number + 1), tmp);
     for (T u = 0; u < squeezed_vertex_number ; ++u) {
         for (DstT const &v : g.out_neighbors(vertex_remap[u])) {
-            out_neigh[tmp[u]] = vertex_map[get_dst_id(v)];
+            out_neigh.get()[tmp[u]] = vertex_map[get_dst_id(v)];
             tmp[u]++;
         }
-        std::sort(&out_neigh[out_offset[u]],
-                  &out_neigh[out_offset[u+1]],
+        std::sort(&out_neigh.get()[out_offset.get()[u]],
+                  &out_neigh.get()[out_offset.get()[u+1]],
                   [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) < get_dst_id(rhs); });
     }
     if (!g.directed()) {
         delete[] tmp;
         return {
-            Graph<T, DstT>{squeezed_vertex_number, out_offset, out_neigh},
-            std::move(vertex_map),
-            std::move(vertex_remap)
+                Graph<T, DstT>{squeezed_vertex_number, out_offset, out_neigh},
+                std::move(vertex_map),
+                std::move(vertex_remap)
         };
     }
     std::vector<offset_t> in_degrees(std::move(out_degrees));
     for (T u = 0; u < squeezed_vertex_number; ++u) {
         in_degrees[u] = g.in_degree(vertex_remap[u]);
     }
-    auto *in_offset = new offset_t[squeezed_vertex_number + 1];
+    std::shared_ptr<offset_t> in_offset(new offset_t[squeezed_vertex_number + 1], std::default_delete<offset_t[]>());
     curr = 0;
     for (T u = 0; u < squeezed_vertex_number; ++u) {
-        in_offset[u] = curr;
+        in_offset.get()[u] = curr;
         curr += in_degrees[u];
     }
-    in_offset[squeezed_vertex_number] = curr;
-    auto *in_neigh = new DstT[edge_number];
-    std::copy(in_offset, in_offset + (squeezed_vertex_number + 1), tmp);
+    in_offset.get()[squeezed_vertex_number] = curr;
+    std::shared_ptr<DstT> in_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
+    std::copy(in_offset.get(), in_offset.get() + (squeezed_vertex_number + 1), tmp);
     for (T u = 0; u < squeezed_vertex_number; ++u) {
         for (DstT const &v : g.in_neighbors(vertex_remap[u])) {
-            in_neigh[tmp[u]] = vertex_map[get_dst_id(v)];
+            in_neigh.get()[tmp[u]] = vertex_map[get_dst_id(v)];
             tmp[u]++;
         }
-        std::sort(&in_neigh[in_offset[u]],
-                  &in_neigh[in_offset[u+1]],
+        std::sort(&in_neigh.get()[in_offset.get()[u]],
+                  &in_neigh.get()[in_offset.get()[u+1]],
                   [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) < get_dst_id(rhs); });
     }
     delete[] tmp;
@@ -218,49 +233,46 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> squeeze_graph(Graph<T
 */
 template<typename T, typename DstT>
 Graph<T, DstT> simplify_graph(Graph<T, DstT> &raw) {
-    typedef typename Graph<T, DstT>::offset_t offset_t;
     std::size_t vertex_number = raw.vertex_number_;
     std::vector<offset_t> out_degrees(vertex_number, 0);
     for (T u = 0; u < vertex_number; ++u) {
-        out_degrees[u] = std::distance(&raw.out_neigh[raw.out_offset[u]], 
-            std::unique(&raw.out_neigh[raw.out_offset[u]], &raw.out_neigh[raw.out_offset[u+1]], 
-                [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) == get_dst_id(rhs); }));
+        out_degrees[u] = std::distance(&raw.out_neigh_.get()[raw.out_offset_.get()[u]],
+                                       std::unique(&raw.out_neigh_.get()[raw.out_offset_.get()[u]], &raw.out_neigh_.get()[raw.out_offset_.get()[u + 1]],
+                                                   [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) == get_dst_id(rhs); }));
     }
-    auto *out_offset = new offset_t[vertex_number + 1];
+    std::shared_ptr<offset_t> out_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
     offset_t curr{};
     for (size_t i = 0; i < vertex_number; ++i) {
-        out_offset[i] = curr;
+        out_offset.get()[i] = curr;
         curr += out_degrees[i];
     }
-    out_offset[vertex_number] = curr;
-    std::size_t edge_number = out_offset[vertex_number];
-    auto *out_neigh = new DstT[edge_number];
+    out_offset.get()[vertex_number] = curr;
+    std::size_t edge_number = curr;
+    std::shared_ptr<DstT> out_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
     for (T u = 0; u < vertex_number; ++u) {
-        std::copy(&raw.out_neigh[raw.out_offset[u]], &raw.out_neigh[raw.out_offset[u]+out_degrees[u]], &out_neigh[out_offset[u]]);
+        std::copy(&raw.out_neigh_.get()[raw.out_offset_.get()[u]], &raw.out_neigh_.get()[raw.out_offset_.get()[u] + out_degrees[u]], &out_neigh.get()[out_offset.get()[u]]);
     }
     if (!raw.directed_) {
         return {vertex_number, out_offset, out_neigh};
     }
     std::vector<offset_t> in_degrees(vertex_number, 0);
     for (T u = 0; u < vertex_number; ++u) {
-        in_degrees[u] = std::distance(&raw.in_neigh[raw.in_offset[u]], 
-            std::unique(&raw.in_neigh[raw.in_offset[u]], &raw.in_neigh[raw.in_offset[u+1]], 
-                [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) == get_dst_id(rhs); }));
+        in_degrees[u] = std::distance(&raw.in_neigh_.get()[raw.in_offset_.get()[u]],
+                                      std::unique(&raw.in_neigh_.get()[raw.in_offset_.get()[u]], &raw.in_neigh_.get()[raw.in_offset_.get()[u + 1]],
+                                                  [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) == get_dst_id(rhs); }));
     }
-    auto *in_offset = new offset_t[vertex_number + 1];
+    std::shared_ptr<offset_t> in_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
     curr = 0;
     for (size_t i = 0; i < vertex_number; ++i) {
-        in_offset[i] = curr;
+        in_offset.get()[i] = curr;
         curr += in_degrees[i];
     }
-    in_offset[vertex_number] = curr;
-    auto *in_neigh = new DstT[edge_number];
+    in_offset.get()[vertex_number] = curr;
+    std::shared_ptr<DstT> in_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
     for (T u = 0; u < vertex_number; ++u) {
-        std::copy(&raw.in_neigh[raw.in_offset[u]], &raw.in_neigh[raw.in_offset[u]+in_degrees[u]], &in_neigh[in_offset[u]]);
+        std::copy(&raw.in_neigh_.get()[raw.in_offset_.get()[u]], &raw.in_neigh_.get()[raw.in_offset_.get()[u] + in_degrees[u]], &in_neigh.get()[in_offset.get()[u]]);
     }
     return {vertex_number, out_offset, out_neigh, in_offset, in_neigh};
 }
 
 }
-
-#include "graph.tpp"

@@ -5,6 +5,7 @@
 
 # build temporary files
 cmake-build-debug-clang
+cmake-build-release-clang
 out
 build
 
