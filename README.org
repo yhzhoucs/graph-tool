@@ -1,23 +1,73 @@
 #+title: Graph Tool
 
-
 * Introduction
 
 A simple graph pre-processing library.
 
-* Manual
+* Requirements
 
-** Intergration
-
-Use *C++17* and newer.
+Use *C++11* or newer.
 
 There's no other dependency if you just use it as a library for your
-own project. There're two ways to intergrate it into your own project.
+own project.
 
-*** git clone
+* Intergration
 
-You can just clone it to the third-party dependency directory such as
-=extern/=. Then, you can include it in your CMakeLists.txt:
+ There're three ways to intergrate the library into your own project.
+
+*** Build and install
+
+Clone, build and install the library:
+
+#+begin_src shell
+git clone https://github.com/yhzhoucs/graph-tool.git
+cd gtool
+mkdir build
+cmake -S . -B build -G "Ninja Multi-Config"
+cmake --install ./build --config Release --prefix path/to/install
+#+end_src
+
+Import it in your CMakeLists.txt:
+
+#+begin_src cmake
+add_executable(Foo main.cpp)
+find_package(gtool CONFIG REQUIRED PATHS path/to/install)
+target_link_libraries(Foo PRIVATE gtool::gtool)
+#+end_src
+
+*** Download a packaged release
+
+A packaged gtool is in Release area. Download and extract it to the
+library directory in your system. Follow the /Import/ step above.
+
+Also, you can have cmake to download it and import it automatically:
+
+#+begin_src cmake
+# fetch dependency
+include(FetchContent)
+FetchContent_Declare(
+        gtool
+        URL https://github.com/yhzhoucs/graph-tool/releases/download/v0.1.0/gtool-0.1.0-win64.tar.gz
+        URL_HASH MD5=74827C6DCB211214C2163CD54FDDE497
+)
+FetchContent_MakeAvailable(gtool)
+
+add_executable(Foo main.cpp)
+
+# add my graph processing library
+find_package(gtool CONFIG REQUIRED PATHS ${gtool_SOURCE_DIR})
+if (gtool_FOUND)
+    message(STATUS "Critical library `gtool` found.")
+    target_link_libraries(Foo PRIVATE gtool::gtool)
+else ()
+    message(FATAL_ERROR "The essential library `gtool` is not found.")
+endif ()
+#+end_src
+
+*** Directly use the code [NOT RECOMMANDED]
+
+Clone it to the third-party dependency directory such as
+=extern/=. Import it directly in your CMakeLists.txt:
 
 #+begin_src cmake
 add_executable(Foo main.cpp)
@@ -25,31 +75,32 @@ add_subdirectory(extern/gtool)
 target_link_libraries(Foo PRIVATE gtool)
 #+end_src
 
-*** cmake package
+*This approach is not recommended* because the target namespace is
+mixed up. This may cause collisions.
 
-A packaged gtool is in Release area. Download and extract it to the
-library directory in your system. Import it in your CMakeLists.txt:
-
-#+begin_src cmake
-add_executable(Foo main.cpp)
-find_package(gtool CONFIG REQUIRED PATHS path/to/your/libraries)
-target_link_libraries(Foo PRIVATE gtool::gtool)
-#+end_src
-
-** Run Demo
+* Run demos
 
 Follow the procedure below:
 
-#+begin_src
+#+begin_src shell
 mkdir build
 cmake -S . -B build -G "Ninja Multi-Config" -DENABLE_BUILD_DEMO=ON
 cmake --build ./build --config Release
-./build/demo1 ./dataset/Slashdot0811.txt
-./build/demo2 ./dataset/Slashdot0811.txt
+./build/Release/demo1 ./dataset/soc-Slashdot0811.txt
+./build/Release/demo2 ./dataset/soc-Slashdot0811.txt
 #+end_src
 
-** Use it in development
+* Use it in development
 
 Clone this library and modify the code as you want.
 
-You may want to use CTest. This project relies on [[https://github.com/catchorg/Catch2/][Catch2]] to finish all the tests. Remember to enable it by adding flag *-DENABLE_BUILD_TEST=ON*.
+You may want to use CTest. This project relies on [[https://github.com/catchorg/Catch2/][Catch2]] to finish all
+the tests. Check the /tests/ directory. Remember to enable it by
+adding flag *-DENABLE_BUILD_TEST=ON*.
+
+* About stream graph
+
+As the restoration to the basic graph is costly, this part of code is
+excluded in the source code. *But* you can enable it by add the
+compile option: *-DBUILD_WITH_RESTORE*. See =CMakeLists.txt= in the
+project root for more details.

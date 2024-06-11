@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 project(gtool
-    VERSION 0.0.1
+    VERSION 0.1.0
     DESCRIPTION "A simple graph processing tool"
     LANGUAGES CXX)
 

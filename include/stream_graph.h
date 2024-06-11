@@ -10,6 +10,8 @@ namespace gtool {
 template<typename T, typename DstT = T>
 class StreamGraph {
 public:
+    typedef T vertex_type;
+    typedef DstT destination_type;
     struct Neighborhood {
         T n;
         offset_t *l_offset;
@@ -68,8 +70,8 @@ public:
     Neighborhood in_neighbors(T n) const { return { n, in_l_offset_.get(), in_r_offset_.get(), in_neigh_.get() }; }
     Neighborhood out_neighbors_prev(T n) const { return { n, out_l_offset_.get(), out_r_offset_prev_.get(), out_neigh_.get() }; }
     Neighborhood in_neighbors_prev(T n) const { return { n, in_l_offset_.get(), in_r_offset_prev_.get(), in_neigh_.get() }; }
-    Neighborhood out_neighbors_delta(T n) const { return { n, out_r_offset_.get(), out_r_offset_prev_.get(), out_neigh_.get() }; }
-    Neighborhood in_neighbors_delta(T n) const { return { n, in_r_offset_.get(), in_r_offset_prev_.get(), in_neigh_.get() }; }
+    Neighborhood out_neighbors_delta(T n) const { return { n, out_r_offset_prev_.get(), out_r_offset_.get(), out_neigh_.get() }; }
+    Neighborhood in_neighbors_delta(T n) const { return { n, in_r_offset_prev_.get(), in_r_offset_.get(), in_neigh_.get() }; }
     template<typename Iter,
             typename=std::enable_if_t<std::is_same_v<
                     typename std::iterator_traits<Iter>::value_type, std::pair<T, DstT>>>>
@@ -157,6 +159,14 @@ public:
     }
     [[nodiscard]] bool has_more_batches() const { return offset_ < delta_.size(); }
     [[nodiscard]] int next_batch_size() const { return std::min(static_cast<int>(delta_.size()) - offset_, max_batch_size_); }
+    auto view_next_batch() {
+        if (finish_) {
+            throw std::runtime_error("Error: Stream when no more batches exist.");
+        }
+        auto beg = delta_.begin() + offset_;
+        int size = next_batch_size();
+        return std::make_tuple(beg, beg + size);
+    }
     void stream_next_batch(bool with_update = false) {
         if (finish_) {
             throw std::runtime_error("Error: Stream when no more batches exist.");
