@@ -1,0 +1,135 @@
+#+title: Quick Start
+
+* Graph Format
+
+/gtool/ now supports 2 graph file formats.
+1. common graph edge list format
+2. matrix market format
+
+Common graph edge list format starts with serveral commented lines:
+
+#+begin_example
+# This is a comment.
+# You can put vertex number or edge number here.
+# Or you can put anything you want.
+#+end_example
+
+They are followed by \( e \) lines, and each line =u v= represents an
+edge \( u\rightarrow v\). For example,
+
+#+begin_example
+1 2
+1 3
+2 1
+#+end_example
+
+represent 3 edge \( 1\rightarrow 2, 1\rightarrow 3, 2\rightarrow 1 \).
+
+The whole example of common graph edge list format is:
+
+#+begin_example
+# This is a comment.
+# You can put vertex number or edge number here.
+# Or you can put anything you want.
+1 2
+1 3
+2 1
+#+end_example
+
+The *Martrix Market* Format is a little bit more complicated. See
+[[https://math.nist.gov/MatrixMarket/formats.html][Their Site]] for details.
+
+* Build a CSR
+
+Use =Builder= to build a normal static graph, and use =StreamBuilder=
+to build a stream graph.
+
+#+begin_src cpp
+#include <filesystem>
+#include <gtool/graph.h>
+#include <gtool/builder.h>
+// replace with your graph file path
+std::filesystem::path graph_file_path{"./dataset/soc-Slashdot0811.txt"};
+if (!exists(graph_file_path)) {
+    std::cerr << "Error: graph file not found!" << std::endl;
+    return -1;
+}
+
+gtool::Builder<Node> builder{graph_file_path.string()};
+gtool::Graph<Node> graph = builder.build_csr();
+#+end_src
+
+Or if you want to build a stream graph:
+
+#+begin_src cpp
+#include <gtool/stream_graph.h>
+#include <gtool/stream_builder.h>
+gtool::StreamBuilder<Node> builder{graph_file_path.string()};
+gtool::StreamGraph<Node> graph = builder.build_csr();
+#+end_src
+
+There are serveral build options. For static graph,
+- =directed= indicates whether the graph inputed is directed. If for
+  any edge \( u\rightarrow v \), there exists a reversed edge
+  \( v\rightarrow u\), then you *should* set directed to true. The
+  value is set to false by default.
+- =symmetrize= indicates if you want to add a reversed edge for every
+  edge in the file. Notice that if the graph is already indirected
+  (you set =directed= to true), reversed edges will not be added.
+
+For stream graph,
+- =stream_ratio= indicates how many edges you want to make be the
+  streaming edges, which will be add by the processing of
+  streaming. The parameter is a proportion between 0 and 1.
+
+Examples:
+
+#+begin_src cpp
+// Input graph is a directed graph and it will be made undirected
+// (add reverse edges).
+gtool::Builder<Node> builder{graph_file_path.string(), false, true};
+
+// Make 10% of edges in the input file to be streaming edges,
+// which means they won't be added into the graph at the first
+// place.
+gtool::StreamBuilder<Node> s_builder{graph_file_path.string(), 0.1};
+#+end_src
+
+* Stream Graph
+
+There are actually some utilities for stream graphs. They're
+=Streamer= and =DStreamer=.
+
+A *Streamer* receives a graph reference and an edge list. It provides
+methods to split the edge list into batches with given size. You can
+use it to stream batches of *additions* to the stream graph. For example,
+
+#+begin_src cpp
+gtool::StreamBuilder<Node> builder{graph_file_path.string()};
+gtool::StreamGraph<Node> graph = builder.build_csr();
+// Use edges extracted from the graph by StreamBuilder as graph updates
+gtool::Streamer<Node, Node, decltype(builder.delta())> streamer(graph, builder.delta());
+std::cout << "Edge number: " << graph.get_edge_number() << std::endl;
+
+// The batch size is set to 1'000 by default.
+std::cout << "Max batch size: " << streamer.max_batch_size() << std::endl;
+// If you want to make 100 batches and need a proper batch size
+int new_batch_size{};
+std::cout << "Suggested batch size: " << (new_batch_size = streamer.suggest_max_batch_size(100)) << std::endl;
+streamer.max_batch_size(new_batch_size);
+// You must ensure at least one batch exists before start streaming.
+while (streamer.has_more_batches()) {
+    std::cout << "Now stream a batch of edges into graph...";
+    streamer.stream_next_batch();
+    std::cout << "Edge number: " << graph.get_edge_number() << std::endl;
+    // rewrite the previous state with new state
+    streamer.update_graph();
+}
+#+end_src
+
+A *DStreamer* receives a graph reference and an edge list. It provides
+methods to split the edge list into batches with given size. In
+contrast with Streamer, it streams the batches as deletions to the
+stream graph.
+
+Check the header files for details.

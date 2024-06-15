@@ -48,7 +48,7 @@ include(FetchContent)
 FetchContent_Declare(
         gtool
         URL https://github.com/yhzhoucs/graph-tool/releases/download/v0.1.0/gtool-0.1.0-win64.tar.gz
-        URL_HASH MD5=74827C6DCB211214C2163CD54FDDE497
+        URL_HASH MD5=5AAB4B1149610578FDC4D4952DE49080
 )
 FetchContent_MakeAvailable(gtool)
 
@@ -77,6 +77,10 @@ target_link_libraries(Foo PRIVATE gtool)
 
 *This approach is not recommended* because the target namespace is
 mixed up. This may cause collisions.
+
+* Manual
+
+Check [[./doc/quick-start.org][Quick Start]].
 
 * Run demos
 
