@@ -4,7 +4,7 @@
 #include "builder.h"
 
 
-TEST_CASE( "snap format is generated properly", "[static]" ) {
+TEST_CASE( "snap format is generated properly", "[construction]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
@@ -16,7 +16,7 @@ TEST_CASE( "snap format is generated properly", "[static]" ) {
     REQUIRE(graph.get_edge_number() == 905468);
 }
 
-TEST_CASE( "snap format is generated properly for undirected", "[static]" ) {
+TEST_CASE( "snap format is generated properly for undirected", "[construction]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
@@ -28,7 +28,7 @@ TEST_CASE( "snap format is generated properly for undirected", "[static]" ) {
     REQUIRE(graph.get_edge_number() == 1733629);
 }
 
-TEST_CASE( "matrix market format is generated properly", "[static]" ) {
+TEST_CASE( "matrix market format is generated properly", "[construction]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
@@ -40,7 +40,7 @@ TEST_CASE( "matrix market format is generated properly", "[static]" ) {
     REQUIRE(graph.get_edge_number() == 905468);
 }
 
-TEST_CASE( "matrix market format is generated properly for undiredted", "[static]" ) {
+TEST_CASE( "matrix market format is generated properly for undiredted", "[construction]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
@@ -52,7 +52,7 @@ TEST_CASE( "matrix market format is generated properly for undiredted", "[static
     REQUIRE(graph.get_edge_number() == 1733629);
 }
 
-TEST_CASE( "graph is sorted properly", "[static]" ) {
+TEST_CASE( "graph is sorted properly", "[functional]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
@@ -77,7 +77,7 @@ TEST_CASE( "graph is sorted properly", "[static]" ) {
     REQUIRE(is_sorted);
 }
 
-TEST_CASE( "graph is reordered properly", "[static]" ) {
+TEST_CASE( "graph is reordered properly", "[functional]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
@@ -115,7 +115,7 @@ TEST_CASE( "graph is reordered properly", "[static]" ) {
     REQUIRE(is_sorted);
 }
 
-TEST_CASE( "graph is squeezed properly", "[static]" ) {
+TEST_CASE( "graph is squeezed properly", "[functional]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
@@ -140,7 +140,7 @@ TEST_CASE( "graph is squeezed properly", "[static]" ) {
     REQUIRE(is_global_sorted);
 }
 
-TEST_CASE( "graph is simplified properly", "[static][time-consuming]" ) {
+TEST_CASE( "graph is simplified properly", "[functional][time-consuming]" ) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);

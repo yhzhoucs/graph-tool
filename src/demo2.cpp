@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
         streamer.update_graph();
     }
     // build with `-DBUILD_WITH_RESTORE=ON`
-    streamer.restore_graph();
+    graph.restore();
     std::cout << "Graph restored. Edge number: " << graph.get_edge_number() << std::endl;
 
     return 0;

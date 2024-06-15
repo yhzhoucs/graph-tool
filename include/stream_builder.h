@@ -82,7 +82,7 @@ private:
             in_neigh[write_pos] = edge.first;
         }
         // construct
-        return { vertex_number, remain, std::move(out_l_offset), std::move(out_r_offset),
+        return { vertex_number, edge_number, std::move(out_l_offset), std::move(out_r_offset),
                  std::move(out_neigh), std::move(in_l_offset), std::move(in_r_offset), std::move(in_neigh) };
     }
     // Extract delta edges from raw edge list, push them to `delta_`
