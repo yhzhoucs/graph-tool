@@ -9,7 +9,7 @@ option(ENABLE_BUILD_TEST "enable test" OFF)
 option(BUILD_WITH_RESTORE "build gtool with restore" OFF)
 
 add_library(gtool INTERFACE)
-set_property(TARGET gtool PROPERTY CXX_STANDARD 11)
+target_compile_features(gtool INTERFACE cxx_std_11)
 target_include_directories(gtool INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)

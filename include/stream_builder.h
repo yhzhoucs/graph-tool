@@ -8,6 +8,33 @@
 
 namespace gtool {
 
+template<typename T>
+class FixedRange {
+public:
+    class iterator {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = T*;
+        using reference = T&;
+        explicit iterator(T &val, long num = 0) : val_(val), num_(num) {}
+        iterator& operator++() { ++num_; return *this; }
+        iterator operator++(int) { iterator old = *this; ++num_; return old; }
+        bool operator==(iterator other) const { return num_ == other.num_; }
+        bool operator!=(iterator other) const { return !(*this == other); }
+        reference operator*() const { return val_; }
+    private:
+        T &val_;
+        long num_;
+    };
+    explicit FixedRange(T val): val_(val) {}
+    iterator begin() { return iterator(val_); }
+    iterator end() { return iterator(val_, std::numeric_limits<long>::max()); }
+private:
+    T val_;
+};
+
 template<typename T, typename DstT = T>
 class StreamBuilder {
 public:
@@ -19,10 +46,26 @@ public:
     [[nodiscard]] EdgeList<T, DstT> const &delta() const { return delta_; }
     [[nodiscard]] double stream_ratio() const { return stream_ratio_; }
     StreamGraph<T, DstT> build_csr() {
-        return build_base_csr();
+        return build_base_csr(FixedRange<int>(0), FixedRange<int>(0));
+    }
+    template<typename Rng, typename=std::enable_if<IsRangeT<Rng>::value>::type>
+    StreamGraph<T, DstT> build_csr(Rng &&precise_capacity) {
+        return build_base_csr(std::forward<Rng>(precise_capacity), std::forward<Rng>(precise_capacity));
+    }
+    template<typename Rng, typename=std::enable_if<IsRangeT<Rng>::value>::type>
+    StreamGraph<T, DstT> build_csr(Rng &&precise_capacity_out, Rng &&precise_capacity_in) {
+        return build_base_csr(std::forward<Rng>(precise_capacity_out), std::forward<Rng>(precise_capacity_in));
+    }
+    StreamGraph<T, DstT> build_csr(int fixed_capacity) {
+        return build_base_csr(FixedRange<int>(fixed_capacity), FixedRange<int>(fixed_capacity));
+    }
+    StreamGraph<T, DstT> build_csr(int fixed_capacity_out, int fixed_capacity_in) {
+        return build_base_csr(FixedRange<int>(fixed_capacity_out), FixedRange<int>(fixed_capacity_in));
     }
 private:
-    StreamGraph<T, DstT> build_base_csr() {
+    template<typename Rng, typename=std::enable_if<IsRangeT<Rng>::value>::type>
+    StreamGraph<T, DstT> build_base_csr(Rng &&capacity_out, Rng &&capacity_in) {
+        // treated Rng as an input range
         EdgeList<T, DstT> el = read_edge_list<T, DstT>(graph_file_);
         // build offsets with full graph
         T max_idx{};
@@ -39,13 +82,14 @@ private:
         }
         std::unique_ptr<offset_t[]> out_l_offset(new offset_t[vertex_number + 1]);
         offset_t curr{};
-        for (int i = 0; i < vertex_number; ++i) {
+        auto capacity_out_it = std::begin(capacity_out);
+        for (int i = 0; i < vertex_number; ++i, ++capacity_out_it) {
             out_l_offset[i] = curr;
-            curr += out_degrees[i];
+            curr += std::max(out_degrees[i], static_cast<offset_t>(*capacity_out_it));
         }
         out_l_offset[vertex_number] = curr;
         std::size_t edge_number = curr;
-        std::vector<T> in_degrees(vertex_number, 0);
+        std::vector<offset_t> in_degrees(vertex_number, 0);
 #pragma omp parallel for default(none) shared(el, in_degrees)
         for (int i = 0; i < el.size(); ++i) {
             auto const &edge = el[i];
@@ -53,16 +97,17 @@ private:
         }
         std::unique_ptr<offset_t[]> in_l_offset(new offset_t[vertex_number + 1]);
         curr = 0;
-        for (int i = 0; i < vertex_number; ++i) {
+        auto capacity_in_it = std::begin(capacity_in);
+        for (int i = 0; i < vertex_number; ++i, ++capacity_in_it) {
             in_l_offset[i] = curr;
-            curr += in_degrees[i];
+            curr += std::max(in_degrees[i], static_cast<offset_t>(*capacity_in_it));
         }
         in_l_offset[vertex_number] = curr;
 
         // build basic neighbors
         extract_delta(el);
-        auto iter = std::remove_if(el.begin(), el.end(), [](auto const &pair) { return pair.first == -1; });
-        std::size_t remain = std::distance(el.begin(), iter);
+        std::size_t remain = std::distance(el.begin(),
+            std::remove_if(el.begin(), el.end(), [](auto const &pair) { return pair.first == -1; }));
         std::unique_ptr<offset_t[]> out_r_offset(new offset_t[vertex_number + 1]);
         std::memcpy(out_r_offset.get(), out_l_offset.get(), sizeof(offset_t) * (vertex_number + 1));
         std::unique_ptr<DstT[]> out_neigh(new DstT[edge_number]);
