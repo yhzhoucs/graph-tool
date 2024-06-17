@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <set>
+#include <cstring>
 
 namespace gtool {
 
@@ -307,6 +308,8 @@ public:
     void update_graph() {
         stream_graph_.update();
     }
+
+    virtual ~Streamer() {}
 #if defined (BUILD_WITH_RESTORE)
     void reset() {
         offset_ = 0;
@@ -327,7 +330,7 @@ protected:
 
 template<typename T, typename DstT, typename Rng,
         typename=std::enable_if<IsRangeT<typename std::decay<Rng>::type>::value>::type>
-class DStreamer : public Streamer<T, DstT, Rng> {
+class DStreamer final : public Streamer<T, DstT, Rng> {
 public:
     DStreamer(StreamGraph<T, DstT> &stream_graph, Rng &&delta, int max_batch_size=1'00):
         Streamer<T, DstT, Rng>(stream_graph, std::forward<Rng>(delta), max_batch_size) {}\
