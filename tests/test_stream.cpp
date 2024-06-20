@@ -2,10 +2,10 @@
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
 #include <filesystem>
 #include <ranges>
-#include "graph.h"
-#include "builder.h"
-#include "stream_graph.h"
-#include "stream_builder.h"
+#include "gtool/graph.h"
+#include "gtool/builder.h"
+#include "gtool/stream_graph.h"
+#include "gtool/stream_builder.h"
 
 TEST_CASE("stream graph is constructed successfully", "[construction]") {
     using Node = int;

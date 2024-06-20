@@ -9,10 +9,11 @@ option(ENABLE_BUILD_TEST "enable test" OFF)
 option(BUILD_WITH_RESTORE "build gtool with restore" OFF)
 
 add_library(gtool INTERFACE)
+add_library(gtool::gtool ALIAS gtool)
 target_compile_features(gtool INTERFACE cxx_std_11)
 target_include_directories(gtool INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
+    $<INSTALL_INTERFACE:include/gtool>)
 if (BUILD_WITH_RESTORE)
     target_compile_definitions(gtool INTERFACE BUILD_WITH_RESTORE)
 endif ()
@@ -41,7 +42,7 @@ install(TARGETS gtool
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-install(DIRECTORY include/ DESTINATION include/gtool
+install(DIRECTORY include/ DESTINATION include
         FILES_MATCHING PATTERN "*.h")
 
 install(

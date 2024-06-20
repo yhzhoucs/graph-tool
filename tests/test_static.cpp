@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
-#include "graph.h"
-#include "builder.h"
+#include "gtool/graph.h"
+#include "gtool/builder.h"
 
 
 TEST_CASE( "snap format is generated properly", "[construction]" ) {

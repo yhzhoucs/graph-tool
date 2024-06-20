@@ -29,9 +29,9 @@ public:
         edge_number_{}, edge_number_prev_{},
         out_l_offset_{}, out_r_offset_{}, out_r_offset_prev_{},
         in_l_offset_{}, in_r_offset_{}, in_r_offset_prev_{},
-        out_neigh_{}, in_neigh_{},
+        out_neigh_{}, in_neigh_{}
 #if defined(BUILD_WITH_RESTORE)
-         out_r_offset_backup_{}, in_r_offset_backup_{},
+         , out_r_offset_backup_{}, in_r_offset_backup_{},
          out_neigh_backup_{}, in_neigh_backup_{}
 #endif
     {}
@@ -47,9 +47,9 @@ public:
             out_l_offset_(std::move(out_l_offset)), out_r_offset_(std::move(out_r_offset)), out_neigh_(std::move(out_neigh)),
             in_l_offset_(std::move(in_l_offset)), in_r_offset_(std::move(in_r_offset)), in_neigh_(std::move(in_neigh)),
             out_r_offset_prev_(new offset_t[vertex_number + 1]),
-            in_r_offset_prev_(new offset_t[vertex_number + 1]),
+            in_r_offset_prev_(new offset_t[vertex_number + 1])
 #if defined (BUILD_WITH_RESTORE)
-            out_r_offset_backup_{new offset_t[vertex_number + 1]},
+            , out_r_offset_backup_{new offset_t[vertex_number + 1]},
             in_r_offset_backup_{new offset_t[vertex_number + 1]},
             out_neigh_backup_{new DstT[edge_capacity]},
             in_neigh_backup_{new DstT[edge_capacity]}

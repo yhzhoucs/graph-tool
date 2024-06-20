@@ -1,5 +1,5 @@
-#include "stream_builder.h"
-#include "stream_graph.h"
+#include "gtool/stream_builder.h"
+#include "gtool/stream_graph.h"
 #include <filesystem>
 #include <iostream>
 
@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
     using Node = int;
     namespace fs = std::filesystem;
     fs::path graph_file_path(DATASET_PATH);
-    graph_file_path /= "soc-Slashdot0811.mtx";
+    graph_file_path /= "soc-Slashdot0811.txt";
     gtool::StreamBuilder<Node> builder{graph_file_path.string()};
     gtool::StreamGraph<Node> graph = builder.build_csr();
     gtool::Streamer<Node, Node, decltype(builder.delta())> streamer(graph, builder.delta());

@@ -1,5 +1,5 @@
-#include "graph.h"
-#include "builder.h"
+#include "gtool/graph.h"
+#include "gtool/builder.h"
 #include <filesystem>
 #include <iostream>
 
