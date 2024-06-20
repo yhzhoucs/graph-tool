@@ -5,6 +5,7 @@
 #include <random>
 #include <type_traits>
 #include <unordered_set>
+#include <utility>
 
 namespace gtool {
 
@@ -13,12 +14,29 @@ class FixedRange {
 public:
     class iterator {
     public:
-        using iterator_category = std::forward_iterator_tag;
         using value_type = T;
         using difference_type = std::ptrdiff_t;
         using pointer = T*;
         using reference = T&;
         explicit iterator(T &val, long num = 0) : val_(val), num_(num) {}
+        iterator(iterator const &other): val_(other.val_), num_(other.num_) {}
+        iterator(iterator &&other) noexcept: val_(other.val_), num_(std::move(other.num_)) {}
+        iterator &operator=(iterator const &other) {
+            if (this == &other) {
+                return *this;
+            }
+            val_ = other.val_;
+            num_ = other.num_;
+            return *this;
+        }
+        iterator &operator=(iterator &&other) noexcept {
+            if (this == &other) {
+                return *this;
+            }
+            val_ = other.val_;
+            num_ = std::move(other.num_);
+            return *this;
+        }
         iterator& operator++() { ++num_; return *this; }
         iterator operator++(int) { iterator old = *this; ++num_; return old; }
         bool operator==(iterator other) const { return num_ == other.num_; }
@@ -38,11 +56,8 @@ private:
 template<typename T, typename DstT = T>
 class StreamBuilder {
 public:
-    template<typename String>
-    requires std::is_convertible_v<std::remove_cvref_t<String>, std::string>
-    explicit
-    StreamBuilder(String &&file_name, double stream_ratio = 0.01) :
-            graph_file_(std::forward<String>(file_name)), stream_ratio_{stream_ratio}, delta_{} {}
+    explicit StreamBuilder(std::string file_name, double stream_ratio = 0.01) :
+            graph_file_(std::move(file_name)), stream_ratio_{stream_ratio}, delta_{} {}
     [[nodiscard]] EdgeList<T, DstT> const &delta() const { return delta_; }
     [[nodiscard]] double stream_ratio() const { return stream_ratio_; }
     StreamGraph<T, DstT> build_csr() {

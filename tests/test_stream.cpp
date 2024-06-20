@@ -162,3 +162,19 @@ TEST_CASE("Graph is restored properly", "[restore]") {
     }
 }
 
+TEST_CASE("FixRange works properly", "[tiny][fix-range]") {
+    gtool::FixedRange<int> fr(10);
+    auto first = std::begin(fr);
+    for (int i{}; first != std::end(fr) && i < 10; ++i, ++first) {
+        REQUIRE(*first == 10);
+    }
+    REQUIRE(first != std::end(fr));
+    first = std::begin(fr);
+    for (int i{}; i < 100; ++i)
+        ++first;
+    int cnt{};
+    for (auto tmp = std::begin(fr); tmp != first; ++tmp) {
+        ++cnt;
+    }
+    REQUIRE(cnt == 100);
+}
