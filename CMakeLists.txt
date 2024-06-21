@@ -13,7 +13,7 @@ add_library(gtool::gtool ALIAS gtool)
 target_compile_features(gtool INTERFACE cxx_std_11)
 target_include_directories(gtool INTERFACE
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include/gtool>)
+    $<INSTALL_INTERFACE:include>)
 if (BUILD_WITH_RESTORE)
     target_compile_definitions(gtool INTERFACE BUILD_WITH_RESTORE)
 endif ()
