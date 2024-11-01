@@ -39,15 +39,23 @@ The whole example of common graph edge list format is:
 The *Martrix Market* Format is a little bit more complicated. See
 [[https://math.nist.gov/MatrixMarket/formats.html][Their Site]] for details.
 
-* Build a CSR
+* Build a graph
 
-Use =Builder= to build a normal static graph, and use =StreamBuilder=
-to build a stream graph.
+*[Updated]*
+
+Use these methods to build static graphs:
+- =build_graph_from_file= to generate graph from a file
+- =build_graph_from_edgelist= to generate graph from an edge-list [rarely used]
+
+Use =StreamBuilder= to build a stream graph.
 
 #+begin_src cpp
 #include <filesystem>
 #include <gtool/graph.h>
 #include <gtool/builder.h>
+
+using Node = int;
+
 // replace with your graph file path
 std::filesystem::path graph_file_path{"./dataset/soc-Slashdot0811.txt"};
 if (!exists(graph_file_path)) {
@@ -55,8 +63,7 @@ if (!exists(graph_file_path)) {
     return -1;
 }
 
-gtool::Builder<Node> builder{graph_file_path.string()};
-gtool::Graph<Node> graph = builder.build_csr();
+auto graph =  gtool::build_graph_from_file<Node>(graph_file_path.string());
 #+end_src
 
 Or if you want to build a stream graph:
