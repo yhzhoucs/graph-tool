@@ -31,14 +31,8 @@ public:
         iterator end() { return neigh + offset[n + 1]; }
     };
 
-    Graph(): directed_{}, vertex_number_{}, edge_number_{}, out_offset_{},
-             out_neigh_{}, in_offset_{}, in_neigh_{} {};
-    Graph(std::size_t vertex_number, std::shared_ptr<offset_t> out_offset, std::shared_ptr<DstT> out_neigh)
-        : vertex_number_{vertex_number}, out_offset_(std::move(out_offset)), out_neigh_(std::move(out_neigh)) {
-        in_offset_ = out_offset_;
-        in_neigh_ = out_neigh_;
-        edge_number_ = out_offset_.get()[vertex_number_];
-    }
+    Graph(): vertex_number_{}, edge_number_{}, out_offset_{},
+             out_neigh_{}, in_offset_{}, in_neigh_{} {}
     Graph(std::size_t vertex_number, std::shared_ptr<offset_t> out_offset, std::shared_ptr<DstT> out_neigh,
           std::shared_ptr<offset_t> in_offset, std::shared_ptr<DstT> in_neigh)
           : vertex_number_{vertex_number}, out_offset_(std::move(out_offset)), out_neigh_(std::move(out_neigh)),
@@ -46,7 +40,6 @@ public:
         edge_number_ = out_offset_.get()[vertex_number_];
     }
     ~Graph() = default;
-    [[nodiscard]] bool directed() const { return directed_; }
     [[nodiscard]] std::size_t get_vertex_number() const { return vertex_number_; }
     [[nodiscard]] std::size_t get_edge_number() const { return edge_number_; }
     offset_t out_degree(T n) const { return out_offset_.get()[n + 1] - out_offset_.get()[n]; }
@@ -58,7 +51,6 @@ public:
     template<typename TT, typename DstTT>
     friend Graph<TT, DstTT> simplify_graph(Graph<TT, DstTT> &raw);
 private:
-    bool directed_;
     std::size_t vertex_number_;
     std::size_t edge_number_;
     std::shared_ptr<offset_t> out_offset_;
@@ -75,12 +67,10 @@ void Graph<T, DstT>::sort_neighborhood(Comp comp) {
                   &out_neigh_.get()[out_offset_.get()[u + 1]],
                   [&](T const &lhs, T const &rhs) { return comp(out_degree(lhs), out_degree(rhs)); });
     }
-    if (directed_) {
-        for (T u = 0; u < vertex_number_; ++u) {
-            std::sort(&in_neigh_.get()[in_offset_.get()[u]],
-                      &in_neigh_.get()[in_offset_.get()[u + 1]],
-                      [&](T const &lhs, T const &rhs) { return comp(out_degree(lhs), out_degree(rhs)); });
-        }
+    for (T u = 0; u < vertex_number_; ++u) {
+        std::sort(&in_neigh_.get()[in_offset_.get()[u]],
+                  &in_neigh_.get()[in_offset_.get()[u + 1]],
+                  [&](T const &lhs, T const &rhs) { return comp(out_degree(lhs), out_degree(rhs)); });
     }
 }
 
@@ -120,10 +110,6 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> reorder_by_degree(Gra
         std::sort(&out_neigh.get()[out_offset.get()[new_ids[u]]],
                   &out_neigh.get()[out_offset.get()[new_ids[u]+1]],
                   [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) < get_dst_id(rhs); });
-    }
-    if (!g.directed()) {
-        delete[] tmp;
-        return {Graph<T, DstT>{vertex_number, out_offset, out_neigh}, std::move(new_ids), std::move(new_ids_remap)};
     }
     std::vector<T> in_degrees(vertex_number, 0);
     for (int i = 0; i < vertex_number; ++i) {
@@ -190,14 +176,6 @@ std::tuple<Graph<T, DstT>, std::vector<T>, std::vector<T>> squeeze_graph(Graph<T
                   &out_neigh.get()[out_offset.get()[u+1]],
                   [](DstT const &lhs, DstT const &rhs) { return get_dst_id(lhs) < get_dst_id(rhs); });
     }
-    if (!g.directed()) {
-        delete[] tmp;
-        return {
-                Graph<T, DstT>{squeezed_vertex_number, out_offset, out_neigh},
-                std::move(vertex_map),
-                std::move(vertex_remap)
-        };
-    }
     std::vector<offset_t> in_degrees(std::move(out_degrees));
     for (T u = 0; u < squeezed_vertex_number; ++u) {
         in_degrees[u] = g.in_degree(vertex_remap[u]);
@@ -251,9 +229,6 @@ Graph<T, DstT> simplify_graph(Graph<T, DstT> &raw) {
     std::shared_ptr<DstT> out_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
     for (T u = 0; u < vertex_number; ++u) {
         std::copy(&raw.out_neigh_.get()[raw.out_offset_.get()[u]], &raw.out_neigh_.get()[raw.out_offset_.get()[u] + out_degrees[u]], &out_neigh.get()[out_offset.get()[u]]);
-    }
-    if (!raw.directed_) {
-        return {vertex_number, out_offset, out_neigh};
     }
     std::vector<offset_t> in_degrees(vertex_number, 0);
     for (T u = 0; u < vertex_number; ++u) {

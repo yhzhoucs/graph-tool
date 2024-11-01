@@ -110,85 +110,70 @@ EdgeList<T, DstT> symmetrize_edgelist(EdgeList<T, DstT> const &el) {
     return new_el;
 }
 
-template<typename T, typename DstT = T>
-class Builder {
-public:
-    explicit Builder(std::string const &graph_file, bool directed = true, bool symmetrize = false)
-            : graph_file_{graph_file}, symmetrize_{symmetrize && directed},
-              directed_{directed} {}
-    Graph<T, DstT> build_csr() {
-        EdgeList<T, DstT> el = read_edge_list<T, DstT>(graph_file_);
-        if (symmetrize_) {
-            return build_csr_from_edge_list(symmetrize_edgelist(el));
-        } else {
-            return build_csr_from_edge_list(el);
-        }
-    }
-private:
-    template<typename Rng>
-    Graph<T, DstT> build_csr_from_edge_list(Rng &&el) {
-        T max_idx{};
+template<typename T, typename DstT = T, typename Rng>
+Graph<T, DstT> build_graph_from_edgelist(Rng&& el)  {
+    T max_idx{};
 #pragma omp parallel for default(none) shared(el) reduction(max : max_idx)
-        for (int i = 0; i < el.size(); ++i) {
-            max_idx = std::max({max_idx, el[i].first, get_dst_id(el[i].second)});
-        }
-        std::size_t vertex_number = max_idx + 1;
-        std::vector<offset_t> out_degrees(vertex_number, 0);
-#pragma omp parallel for default(none) shared(el, out_degrees)
-        for (int i = 0; i < el.size(); ++i) {
-            auto const &edge = el[i];
-            fetch_and_add(out_degrees[edge.first], 1);
-        }
-        std::shared_ptr<offset_t> out_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
-        offset_t curr{};
-        for (int i = 0; i < vertex_number; ++i) {
-            out_offset.get()[i] = curr;
-            curr += out_degrees[i];
-        }
-        out_offset.get()[vertex_number] = curr;
-        std::size_t edge_number = curr;
-        std::shared_ptr<DstT> out_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
-        auto *tmp = new offset_t[vertex_number + 1];
-        std::copy(out_offset.get(), out_offset.get() + (vertex_number + 1), tmp);
-#pragma omp parallel for default(none) shared(el, tmp, out_neigh)
-        for (int i = 0; i < el.size(); ++i) {
-            auto const &edge = el[i];
-            int write_pos = fetch_and_add(tmp[edge.first], 1);
-            get_dst_id(out_neigh.get()[write_pos]) = edge.second;
-        }
-        if (!directed_ || symmetrize_) {
-            // if the input is undirected or the graph is symmetrized
-            delete[] tmp;
-            return {vertex_number, out_offset, out_neigh};
-        }
-        std::vector<T> in_degrees(vertex_number, 0);
-#pragma omp parallel for default(none) shared(el, in_degrees)
-        for (int i = 0; i < el.size(); ++i) {
-            auto const &edge = el[i];
-            fetch_and_add(in_degrees[get_dst_id(edge.second)], 1);
-        }
-        std::shared_ptr<offset_t> in_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
-        curr = 0;
-        for (int i = 0; i < vertex_number; ++i) {
-            in_offset.get()[i] = curr;
-            curr += in_degrees[i];
-        }
-        in_offset.get()[vertex_number] = curr;
-        std::shared_ptr<DstT> in_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
-        std::copy(in_offset.get(), in_offset.get() + (vertex_number + 1), tmp);
-#pragma omp parallel for default(none) shared(el, tmp, in_neigh)
-        for (int i = 0; i < el.size(); ++i) {
-            auto const &edge = el[i];
-            int write_pos = fetch_and_add(tmp[get_dst_id(edge.second)], 1);
-            get_dst_id(in_neigh.get()[write_pos]) = edge.first;
-        }
-        delete[] tmp;
-        return {vertex_number, out_offset, out_neigh, in_offset, in_neigh};
+    for (int i = 0; i < el.size(); ++i) {
+        max_idx = std::max({max_idx, el[i].first, get_dst_id(el[i].second)});
     }
+    std::size_t vertex_number = max_idx + 1;
+    std::vector<offset_t> out_degrees(vertex_number, 0);
+#pragma omp parallel for default(none) shared(el, out_degrees)
+    for (int i = 0; i < el.size(); ++i) {
+        auto const &edge = el[i];
+        fetch_and_add(out_degrees[edge.first], 1);
+    }
+    std::shared_ptr<offset_t> out_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
+    offset_t curr{};
+    for (int i = 0; i < vertex_number; ++i) {
+        out_offset.get()[i] = curr;
+        curr += out_degrees[i];
+    }
+    out_offset.get()[vertex_number] = curr;
+    std::size_t edge_number = curr;
+    std::shared_ptr<DstT> out_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
+    auto *tmp = new offset_t[vertex_number + 1];
+    std::copy(out_offset.get(), out_offset.get() + (vertex_number + 1), tmp);
+#pragma omp parallel for default(none) shared(el, tmp, out_neigh)
+    for (int i = 0; i < el.size(); ++i) {
+        auto const &edge = el[i];
+        int write_pos = fetch_and_add(tmp[edge.first], 1);
+        get_dst_id(out_neigh.get()[write_pos]) = edge.second;
+    }
+    std::vector<T> in_degrees(vertex_number, 0);
+#pragma omp parallel for default(none) shared(el, in_degrees)
+    for (int i = 0; i < el.size(); ++i) {
+        auto const &edge = el[i];
+        fetch_and_add(in_degrees[get_dst_id(edge.second)], 1);
+    }
+    std::shared_ptr<offset_t> in_offset(new offset_t[vertex_number + 1], std::default_delete<offset_t[]>());
+    curr = 0;
+    for (int i = 0; i < vertex_number; ++i) {
+        in_offset.get()[i] = curr;
+        curr += in_degrees[i];
+    }
+    in_offset.get()[vertex_number] = curr;
+    std::shared_ptr<DstT> in_neigh(new DstT[edge_number], std::default_delete<DstT[]>());
+    std::copy(in_offset.get(), in_offset.get() + (vertex_number + 1), tmp);
+#pragma omp parallel for default(none) shared(el, tmp, in_neigh)
+    for (int i = 0; i < el.size(); ++i) {
+        auto const &edge = el[i];
+        int write_pos = fetch_and_add(tmp[get_dst_id(edge.second)], 1);
+        get_dst_id(in_neigh.get()[write_pos]) = edge.first;
+    }
+    delete[] tmp;
+    return {vertex_number, out_offset, out_neigh, in_offset, in_neigh};
+}
 
-    std::string graph_file_;
-    bool symmetrize_;
-    bool directed_;
-};
+template<typename T, typename DstT = T>
+Graph<T, DstT> build_graph_from_file(std::string const &graph_file, bool symmetrize = false) {
+    auto el = read_edge_list<T, DstT>(graph_file);
+    if (symmetrize) {
+        return build_graph_from_edgelist<T, DstT>(symmetrize_edgelist(el));
+    } else {
+        return build_graph_from_edgelist<T, DstT>(el);
+    }
+}
 
 }

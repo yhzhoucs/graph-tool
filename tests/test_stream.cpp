@@ -34,8 +34,7 @@ TEST_CASE("additions are handled properly", "[addition][time-consuming]") {
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.txt";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder(graph_file_path.string());
-    gtool::Graph<Node> graph = builder.build_csr();
+    gtool::Graph<Node> graph = gtool::build_graph_from_file<Node>(graph_file_path.string());
     gtool::StreamBuilder<Node> stream_builder(graph_file_path.string());
     gtool::StreamGraph<Node> stream_graph = stream_builder.build_csr();
     gtool::Streamer<Node, Node, decltype(stream_builder.delta())> streamer(stream_graph, stream_builder.delta());

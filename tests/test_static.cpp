@@ -10,8 +10,7 @@ TEST_CASE( "snap format is generated properly", "[construction]" ) {
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.txt";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string()};
-    gtool::Graph<Node> graph = builder.build_csr();
+    gtool::Graph<Node> graph = gtool::build_graph_from_file<Node>(graph_file_path.string());
     REQUIRE(graph.get_vertex_number() == 77360);
     REQUIRE(graph.get_edge_number() == 905468);
 }
@@ -22,8 +21,7 @@ TEST_CASE( "snap format is generated properly for undirected", "[construction]" 
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.txt";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string(), true, true};
-    gtool::Graph<Node> graph = builder.build_csr();
+    gtool::Graph<Node> graph = gtool::build_graph_from_file<Node>(graph_file_path.string(), true);
     REQUIRE(graph.get_vertex_number() == 77360);
     REQUIRE(graph.get_edge_number() == 1733629);
 }
@@ -34,8 +32,7 @@ TEST_CASE( "matrix market format is generated properly", "[construction]" ) {
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.mtx";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string()};
-    gtool::Graph<Node> graph = builder.build_csr();
+    gtool::Graph<Node> graph = gtool::build_graph_from_file<Node>(graph_file_path.string());
     REQUIRE(graph.get_vertex_number() == 77360);
     REQUIRE(graph.get_edge_number() == 905468);
 }
@@ -46,8 +43,7 @@ TEST_CASE( "matrix market format is generated properly for undiredted", "[constr
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.mtx";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string(), true, true};
-    gtool::Graph<Node> graph = builder.build_csr();
+    gtool::Graph<Node> graph = gtool::build_graph_from_file<Node>(graph_file_path.string(), true);
     REQUIRE(graph.get_vertex_number() == 77360);
     REQUIRE(graph.get_edge_number() == 1733629);
 }
@@ -58,8 +54,7 @@ TEST_CASE( "graph is sorted properly", "[functional]" ) {
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.txt";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string()};
-    gtool::Graph<Node> graph = builder.build_csr();
+    gtool::Graph<Node> graph = gtool::build_graph_from_file<Node>(graph_file_path.string());
     REQUIRE(graph.get_vertex_number() == 77360);
     REQUIRE(graph.get_edge_number() == 905468);
     graph.sort_neighborhood(std::greater<>{});
@@ -83,12 +78,11 @@ TEST_CASE( "graph is reordered properly", "[functional]" ) {
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.txt";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string()};
     gtool::Graph<Node> graph;
     std::vector<Node> new_ids;
     std::vector<Node> ids_remap;
     {
-        gtool::Graph<Node> raw = builder.build_csr();
+        gtool::Graph<Node> raw = gtool::build_graph_from_file<Node>(graph_file_path.string());
         std::tie(graph, new_ids, ids_remap) = gtool::reorder_by_degree(raw);
     }
 
@@ -121,12 +115,11 @@ TEST_CASE( "graph is squeezed properly", "[functional]" ) {
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.txt";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string()};
     gtool::Graph<Node> graph;
     std::vector<Node> new_ids;
     std::vector<Node> ids_remap;
     {
-        gtool::Graph<Node> raw = builder.build_csr();
+        gtool::Graph<Node> raw = gtool::build_graph_from_file<Node>(graph_file_path.string());
         std::tie(graph, new_ids, ids_remap) = gtool::squeeze_graph(raw);
     }
 
@@ -146,12 +139,11 @@ TEST_CASE( "graph is simplified properly", "[functional][time-consuming]" ) {
     fs::path graph_file_path(DATASET_PATH);
     graph_file_path /= "soc-Slashdot0811.txt";
     REQUIRE(fs::exists(graph_file_path));
-    gtool::Builder<Node> builder{graph_file_path.string()};
     gtool::Graph<Node> graph;
     std::vector<Node> new_ids;
     std::vector<Node> ids_remap;
     {
-        gtool::Graph<Node> raw = builder.build_csr();
+        gtool::Graph<Node> raw = gtool::build_graph_from_file<Node>(graph_file_path.string());
         graph = gtool::simplify_graph(raw);
     }
 

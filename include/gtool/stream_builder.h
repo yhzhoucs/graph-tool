@@ -20,7 +20,7 @@ public:
         using reference = T&;
         explicit iterator(T &val, long num = 0) : val_(val), num_(num) {}
         iterator(iterator const &other): val_(other.val_), num_(other.num_) {}
-        iterator(iterator &&other) noexcept: val_(other.val_), num_(std::move(other.num_)) {}
+        iterator(iterator &&other) noexcept: val_(other.val_), num_(other.num_) {}
         iterator &operator=(iterator const &other) {
             if (this == &other) {
                 return *this;
@@ -34,7 +34,7 @@ public:
                 return *this;
             }
             val_ = other.val_;
-            num_ = std::move(other.num_);
+            num_ = other.num_;
             return *this;
         }
         iterator& operator++() { ++num_; return *this; }

@@ -20,10 +20,9 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    gtool::Builder<Node> builder{graph_file_path.string(), false, true}; // add reverse edges
     gtool::Graph<Node> graph;
     {
-        gtool::Graph<Node> raw = builder.build_csr();
+        auto raw = gtool::build_graph_from_file<Node>(graph_file_path.string(), true);
         graph = gtool::simplify_graph(raw); // remove redundant edges
     }
 
