@@ -10,7 +10,6 @@ out
 build
 
 # cmake presets
-CMakePresets.json
 CMakeUserPresets.json
 
 dataset

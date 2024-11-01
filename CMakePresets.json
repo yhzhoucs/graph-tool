@@ -1,0 +1,46 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "ci-base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "installDir": "${sourceDir}/out/install/${presetName}"
+    },
+    {
+      "name": "ci-ninja",
+      "displayName": "Ninja setup",
+      "description": "Use ninja as generator",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-demo",
+      "displayName": "Enable demo setup",
+      "description": "Enable building demos",
+      "cacheVariables": {
+        "ENABLE_BUILD_DEMO": true
+      }
+    },
+    {
+      "name": "ci-test",
+      "displayName": "Enable test setup",
+      "description": "Enable building tests",
+      "cacheVariables": {
+        "ENABLE_BUILD_TEST": true
+      }
+    },
+    {
+      "name": "ci-restore",
+      "displayName": "Enable restore feature setup",
+      "description": "Make stream graph restorable",
+      "cacheVariables": {
+        "BUILD_WITH_RESTORE": true
+      }
+    }
+  ]
+}
