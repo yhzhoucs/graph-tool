@@ -1,9 +1,11 @@
+# gtoolConfig.cmake.in
+
 @PACKAGE_INIT@
 
 include("${CMAKE_CURRENT_LIST_DIR}/gtool.cmake")
 
 set(gtool_FOUND TRUE)
-set(gtool_INCLUDE_DIRS "@CMAKE_INSTALL_PREFIX@/include/gtool")
+set(gtool_VERSION "@PROJECT_VERSION@")
 
 include(CMakeFindDependencyMacro)
 find_dependency(OpenMP)

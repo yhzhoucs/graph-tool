@@ -38,22 +38,17 @@ endif ()
 # install and pack
 install(TARGETS gtool
         EXPORT gtool
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+        DESTINATION lib/cmake/gtool)
+
+install(EXPORT gtool
+        FILE gtool.cmake
+        NAMESPACE gtool::
+        DESTINATION lib/cmake/gtool)
 
 install(DIRECTORY include/ DESTINATION include
         FILES_MATCHING PATTERN "*.h")
 
-install(
-        EXPORT gtool
-        FILE gtool.cmake
-        NAMESPACE gtool::
-        DESTINATION lib/cmake/gtool
-)
-
 include(CMakePackageConfigHelpers)
-
 configure_package_config_file(
         cmake/gtoolConfig.cmake.in ${PROJECT_BINARY_DIR}/gtoolConfig.cmake
         INSTALL_DESTINATION lib/cmake/gtool)
